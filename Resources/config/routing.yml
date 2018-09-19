@@ -1,3 +1,7 @@
 user:
     type: rest
     resource: Puzzle\Api\UserBundle\Controller\UserController
+
+user_client:
+    type: rest
+    resource: Puzzle\Api\UserBundle\Controller\ClientController

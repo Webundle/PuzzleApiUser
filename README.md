@@ -43,7 +43,7 @@ Load the bundle's routing definition in the application (usually in the `app/con
 ```yaml
 puzzle_api_user:
     resource: "@PuzzleApiUserBundle/Resources/config/routing.yml"
-    prefix:   /v1/user
+    prefix:   /v1
     host: '%host_apis%'
 ```
 

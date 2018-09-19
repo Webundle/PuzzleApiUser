@@ -1,0 +1,3 @@
+user:
+    type: rest
+    resource: Puzzle\Api\UserBundle\Controller\UserController

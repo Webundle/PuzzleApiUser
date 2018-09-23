@@ -1,6 +1,6 @@
 {
 	"name" : "webundle/puzzle-api-user",
-	"description" : "Puzzle Media API",
+	"description" : "Puzzle User API",
 	"type" : "symfony-bundle",
 	"authors" : [{
 			"name" : "AGNES Gnagne Cedric",
@@ -29,10 +29,10 @@
 	},
 	"autoload" : {
 		"psr-0" : {
-			"Webundle\\Puzzle\\Api\\MediaBundle" : ""
+			"Webundle\\Puzzle\\Api\\UserBundle" : ""
 		}
 	},
-	"target-dir" : "Webundle/Puzzle/Api/MediaBundle",
+	"target-dir" : "Webundle/Puzzle/Api/UserBundle",
 	"extra" : {
 		"branch-alias" : {
 			"dev-master" : "1.0-dev"

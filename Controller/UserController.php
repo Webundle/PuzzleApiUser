@@ -2,32 +2,11 @@
 
 namespace Puzzle\Api\UserBundle\Controller;
 
-use Puzzle\OAuthServerBundle\Service\Repository;
-use Puzzle\OAuthServerBundle\Util\FormatUtil;
-use Symfony\Bridge\Doctrine\RegistryInterface;
-use Symfony\Component\HttpFoundation\Request;
-
-use FOS\RestBundle\Controller\Annotations;
-use FOS\RestBundle\Controller\Annotations\QueryParam;
-use FOS\RestBundle\Controller\Annotations\View;
-use FOS\RestBundle\Controller\FOSRestController;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
-use FOS\RestBundle\Controller\Annotations\Delete;
-use FOS\RestBundle\Controller\Annotations\Get;
-use FOS\RestBundle\Controller\Annotations\Post;
-use FOS\RestBundle\Controller\Annotations\Put;
-use JMS\Serializer\SerializerInterface;
-use Symfony\Component\Translation\TranslatorInterface;
-use Swagger\Annotations as SWG;
-use Nelmio\ApiDocBundle\Annotation\Model;
-use Puzzle\OAuthServerBundle\Entity\User;
-use Puzzle\OAuthServerBundle\UserEvents;
-use Puzzle\OAuthServerBundle\Event\UserEvent;
-use Symfony\Component\EventDispatcher\EventDispatcher;
-use Puzzle\OAuthServerBundle\Service\ErrorFactory;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Puzzle\OAuthServerBundle\Controller\BaseFOSRestController;
+use Puzzle\OAuthServerBundle\Entity\User;
 use Puzzle\OAuthServerBundle\Service\Utils;
+use Puzzle\OAuthServerBundle\Util\FormatUtil;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * 
@@ -36,172 +15,163 @@ use Puzzle\OAuthServerBundle\Service\Utils;
  */
 class UserController extends BaseFOSRestController
 {
-    /**
-     * @param RegistryInterface         $doctrine
-     * @param Repository                $repository
-     * @param SerializerInterface       $serializer
-     * @param EventDispatcherInterface  $dispatcher
-     * @param ErrorFactory              $errorFactory
-     */
-    public function __construct(
-        RegistryInterface $doctrine,
-        Repository $repository,
-        SerializerInterface $serializer,
-        EventDispatcherInterface $dispatcher,
-        ErrorFactory $errorFactory
-    ){
-        parent::__construct($doctrine, $repository, $serializer, $dispatcher, $errorFactory);
+    public function __construct() {
+        parent::__construct();
         $this->fields = ['firstName', 'lastName', 'email', 'username', 'phone', 'gender'];
     }
     
 	/**
-	 * @Annotations\View()
-	 * @Get("/users")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Get("/users")
 	 */
 	public function getUsersAction(Request $request) {
-	    $response = $this->repository->filter($request->query, User::class, $this->connection);
+	    /** @var Puzzle\OAuthServerBundle\Service\Repository $repository */
+	    $repository = $this->get('papis.repository');
+	    $response = $repository->filter($request->query, User::class, $this->connection);
+	    
 	    return $this->handleView(FormatUtil::formatView($request, $response));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Get("/users/me")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Get("/users/me")
 	 */
 	public function getUserMeAction(Request $request) {
-	    return $this->handleView(FormatUtil::formatView($request, ['resources' => $this->getUser()]));
+	    return $this->handleView(FormatUtil::formatView($request, $this->getUser()));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Get("/users/{id}")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Get("/users/{id}")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function getUserAction(Request $request, User $user) {
-	    return $this->handleView(FormatUtil::formatView($request, ['resources' => $user]));
+	    return $this->handleView(FormatUtil::formatView($request, $user));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Post("/users")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Post("/users")
 	 */
 	public function postUserAction(Request $request) {
 		$data = $request->request->all();
-		/** @var User $user */
+		
+		/** @var Puzzle\OAuthServerBundle\Entity\User $user */
 		$user = Utils::setter(new User(), $this->fields, $data);
 		$user->setPassword(hash('sha512', $data['password']));
+		
 		/** @var Doctrine\ORM\EntityManager $em */
-		$em = $this->doctrine->getManager($this->connection);
+		$em = $this->get('doctrine')->getManager($this->connection);
 		$em->persist($user);
 		$em->flush();
 		
-		return $this->handleView(FormatUtil::formatView($request, ['resources' => $user]));
+		return $this->handleView(FormatUtil::formatView($request, $user));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\Vie()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserAction(Request $request, User $user) {
 	    $data = $request->request->all();
-	    /** @var User $user */
-	    $user = Utils::setter(new User(), $this->fields, $data);
+	    
+	    /** @var Puzzle\OAuthServerBundle\Entity\User $user */
+	    $user = Utils::setter(new $user, $this->fields, $data);
+	    
 	    /** @var Doctrine\ORM\EntityManager $em */
-		$em = $this->doctrine->getManager($this->connection);
+		$em = $this->get('doctrine')->getManager($this->connection);
 		$em->flush();
 		
-		return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));	
+		return $this->handleView(FormatUtil::formatView($request, $user));	
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}/enable")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/enable")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserEnableAction(Request $request, User $user) {
 	    $user->setEnabled(true);
+	    
 	    /** @var Doctrine\ORM\EntityManager $em */
-	    $em = $this->doctrine->getManager($this->connection);
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    $em->flush();
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	    return $this->handleView(FormatUtil::formatView($request, $user));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}/disable")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/disable")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserDisableAction(Request $request, User $user) {
 	    $user->setEnabled(false);
+	    
 	    /** @var Doctrine\ORM\EntityManager $em */
-	    $em = $this->doctrine->getManager($this->connection);
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    $em->flush();
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	    return $this->handleView(FormatUtil::formatView($request, $user));
 	}
 	
 	/**
 	 * @Annotations\View()
-	 * @Put("/users/{id}/lock")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/lock")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserLockAction(Request $request, User $user) {
 	    $user->setLocked(true);
+	    
 	    /** @var Doctrine\ORM\EntityManager $em */
-	    $em = $this->doctrine->getManager($this->connection);
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    $em->flush();
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	    return $this->handleView(FormatUtil::formatView($request, $user));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}/unlock")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/unlock")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserUnlockAction(Request $request, User $user) {
 	    $user->setLocked(false);
+	    
 	    /** @var Doctrine\ORM\EntityManager $em */
-	    $em = $this->doctrine->getManager($this->connection);
+	    $em = $this->get('doctrine')->getManager($this->connection);
 	    $em->flush();
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	    return $this->handleView(FormatUtil::formatView($request, $user));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}/change-password")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\\View()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/change-password")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserChangePasswordAction(Request $request, User $user) {
-	    if ($user->getId() !== $this->getUser()->getId()) {
-	        return $this->handleView($this->errorFactory->badRequest($request));
-	    }
-	    
 	    $data = $request->request->all();
 	    if (isset($data['password']) && $data['password'] !== null) {
 	        $user->setPassword(hash('sha512', $data['password']));
+	        
 	        /** @var Doctrine\ORM\EntityManager $em */
-	        $em = $this->doctrine->getManager($this->connection);
+	        $em = $this->get('doctrine')->getManager($this->connection);
 	        $em->flush();
 	        
-	        return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	        return $this->handleView(FormatUtil::formatView($request, $user));
 	    }
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 304]));
+	    return $this->handleView(FormatUtil::formatView($request, null, 204));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}/add-roles")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/add-roles")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserAddRolesAction(Request $request, User $user) {
-	    if ($user->getId() !== $this->getUser()->getId()){
-	        return $this->handleView($this->errorFactory->badRequest($request));
-	    }
-	    
 	    $data = $request->request->all();
 	    if (isset($data['roles_to_add']) && count($data['roles_to_add']) > 0) {
 	        $rolesToAdd = $data['roles_to_add'];
@@ -209,25 +179,21 @@ class UserController extends BaseFOSRestController
 	            $user->addRole($role);
 	        }
 	        
-	        $em = $this->doctrine->getManager($this->connection);
+	        $em = $this->get('doctrine')->getManager($this->connection);
 	        $em->flush();
 	        
-	        return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	        return $this->handleView(FormatUtil::formatView($request, $user));
 	    }
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 304]));
+	    return $this->handleView(FormatUtil::formatView($request, null, 204));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Put("/users/{id}/remove-roles")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Put("/users/{id}/remove-roles")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function putUserRemoveRolesAction(Request $request, User $user) {
-	    if ($user->getId() !== $this->getUser()->getId()){
-	        return $this->handleView($this->errorFactory->badRequest($request));
-	    }
-	    
 	    $data = $request->request->all();
 	    if (isset($data['roles_to_remove']) && count($data['roles_to_remove']) > 0) {
 	        $rolesToRemove = $data['roles_to_remove'];
@@ -235,25 +201,25 @@ class UserController extends BaseFOSRestController
 	            $user->removeRole($role);
 	        }
 	        
-	        $em = $this->doctrine->getManager($this->connection);
+	        $em = $this->get()->getManager($this->connection);
 	        $em->flush();
 	        
-	        return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+	        return $this->handleView(FormatUtil::formatView($request, $user));
 	    }
 	    
-	    return $this->handleView(FormatUtil::formatView($request, ['code' => 304]));
+	    return $this->handleView(FormatUtil::formatView($request, null, 204));
 	}
 	
 	/**
-	 * @Annotations\View()
-	 * @Delete("/users/{id}")
-	 * @ParamConverter("user", class="PuzzleOAuthServerBundle:User")
+	 * @FOS\RestBundle\Controller\Annotations\View()
+	 * @FOS\RestBundle\Controller\Annotations\Delete("/users/{id}")
+	 * @Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter("user", class="PuzzleOAuthServerBundle:User")
 	 */
 	public function deleteUserAction(Request $request, User $user) {
-		$em = $this->doctrine->getManager($this->connection);
+		$em = $this->get('doctrine')->getManager($this->connection);
 		$em->remove($user);
 		$em->flush();
 		
-		return $this->handleView(FormatUtil::formatView($request, ['code' => 200]));
+		return $this->handleView(FormatUtil::formatView($request, null, 204));
 	}
 }

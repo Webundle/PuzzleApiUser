@@ -35,7 +35,18 @@ class AppKernel extends Kernel
 }
 ```
 
-### Step 3: Register the Routes
+### Step 3: Define host apis parameter
+
+Define host apis parameter if it is not yet (usually in the `app/config/parameters.yml` file):
+
+# app/config/parameters.yml
+```yaml
+parameters:
+	...
+   	host_apis: '<host_apis_uri>'
+```
+
+### Step 4: Register the Routes
 
 Load the bundle's routing definition in the application (usually in the `app/config/routing.yml` file):
 

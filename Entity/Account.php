@@ -13,6 +13,7 @@ use Puzzle\OAuthServerBundle\Traits\PrimaryKeyable;
 use Puzzle\OAuthServerBundle\Entity\Client;
 use Puzzle\OAuthServerBundle\Entity\User;
 use Knp\DoctrineBehaviors\Model\Blameable\Blameable;
+use Knp\DoctrineBehaviors\Model\Timestampable\Timestampable;
                                         
 /**
 * User
@@ -33,7 +34,7 @@ class Account
 {
     const ROLE_DEFAULT = 'ROLE_USER';
  
-    use PrimaryKeyable, Blameable;
+    use PrimaryKeyable, Blameable, Timestampable;
  
     /**
     * @ORM\Column(name="first_name", type="string", length=25)
@@ -69,16 +70,6 @@ class Account
     * @JMS\Type("string")
     */
     private $email;
-  
-    /**
-    * @ORM\Column(type="string", length=255, nullable=true)
-    */
-    private $salt;
-
-    /**
-    * @ORM\Column(type="string", length=255, nullable=true)
-    */
-    private $password;
       
     /**
     * @ORM\Column(type="boolean")
